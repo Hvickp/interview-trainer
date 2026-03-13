@@ -328,32 +328,32 @@ code {
     color: var(--accent-strong);
 }
 
-.subject-pill[data-subject="数据结构"] {
+.subject-pill[data-subject="\6570 \636E \7ED3 \6784"] {
     background: rgba(64, 145, 108, 0.14);
     color: #2b6e55;
 }
 
-.subject-pill[data-subject="计算机组成原理"] {
+.subject-pill[data-subject="\8BA1 \7B97 \673A \7EC4 \6210 \539F \7406"] {
     background: rgba(162, 101, 42, 0.14);
     color: #8c5627;
 }
 
-.subject-pill[data-subject="操作系统"] {
+.subject-pill[data-subject="\64CD \4F5C \7CFB \7EDF"] {
     background: rgba(46, 86, 158, 0.14);
     color: #2d5596;
 }
 
-.subject-pill[data-subject="计算机网络"] {
+.subject-pill[data-subject="\8BA1 \7B97 \673A \7F51 \7EDC"] {
     background: rgba(185, 72, 62, 0.14);
     color: #9f3b31;
 }
 
-.subject-pill[data-subject="数据库"] {
+.subject-pill[data-subject="\6570 \636E \5E93"] {
     background: rgba(40, 121, 133, 0.14);
     color: #23646f;
 }
 
-.subject-pill[data-subject="软件工程"] {
+.subject-pill[data-subject="\8F6F \4EF6 \5DE5 \7A0B"] {
     background: rgba(113, 79, 139, 0.14);
     color: #64437c;
 }
@@ -546,6 +546,13 @@ code {
 
 .empty-list li + li {
     margin-top: 6px;
+}
+
+.answer-content .katex-display,
+.question-title .katex-display {
+    margin: 0.45em 0;
+    overflow-x: auto;
+    overflow-y: hidden;
 }
 
 @media (max-width: 980px) {

@@ -32,7 +32,6 @@
 
     const ALLOWED_STATUSES = new Set(["draft", "verified", "invalid"]);
     const RECENT_WINDOW_SIZE = 10;
-
     const IMPORT_SUBJECT_PREFIX = {
         "数据结构": "ds",
         "计算机组成原理": "co",
@@ -724,7 +723,7 @@
             "<div class='question-body'>" +
             "<section>" +
             "<p class='question-label'>题目</p>" +
-            "<h3 class='question-title'>" + escapeHtml(question.question) + "</h3>" +
+            "<h3 class='question-title'>" + renderMathText(question.question) + "</h3>" +
             "<p class='question-note'>先自己按“定义 / 核心点 / 常见追问 / 例子”组织 60 到 90 秒回答，再展开参考答案。</p>" +
             "</section>" +
             "<section class='answer-panel " + (state.session.answerVisible ? "" : "locked") + "'>" +
@@ -735,7 +734,7 @@
             "</div>" +
             "<button class='answer-btn' type='button' data-action='show-answer' " + (state.session.answerVisible ? "disabled" : "") + ">" + showAnswerLabel + "</button>" +
             "</div>" +
-            "<div class='" + answerContentClass + "'>" + escapeHtml(question.referenceAnswer) + "</div>" +
+            "<div class='" + answerContentClass + "'>" + renderMathText(question.referenceAnswer) + "</div>" +
             "</section>" +
             "<section class='assessment-panel'>" +
             "<div class='assessment-head'>" +
@@ -754,6 +753,8 @@
             "</section>" +
             "</div>" +
             "</article>";
+
+        enhanceMathRendering(elements.questionShell);
     }
 
     function createMasteryButtonMarkup(level, activeMastery, enabled) {
@@ -984,6 +985,28 @@
             .replace(/\s+$/g, "");
     }
 
+    function renderMathText(value) {
+        return escapeHtml(value);
+    }
+
+    function enhanceMathRendering(container) {
+        if (!container || typeof window.renderMathInElement !== "function") {
+            return;
+        }
+
+        window.renderMathInElement(container, {
+            delimiters: [
+                { left: "$$", right: "$$", display: true },
+                { left: "$", right: "$", display: false },
+                { left: "\\(", right: "\\)", display: false },
+                { left: "\\[", right: "\\]", display: true }
+            ],
+            throwOnError: false,
+            strict: "ignore",
+            trust: false
+        });
+    }
+
     function loadProgress() {
         try {
             const parsed = JSON.parse(localStorage.getItem(STORAGE_KEYS.progress));
@@ -1086,8 +1109,3 @@
             .replace(/'/g, "&#39;");
     }
 }());
-
-
-
-
-
