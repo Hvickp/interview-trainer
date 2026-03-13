@@ -1,0 +1,80 @@
+[
+    {
+        "id": "sample-ds-0001",
+        "subject": "数据结构",
+        "question": "请替换为来自复试资料的数据结构原题",
+        "referenceAnswer": "请替换为根据复试资料校对后的参考答案。",
+        "source": {
+            "document": "专业课面试刷题答案.pdf",
+            "page": 1,
+            "order": 1
+        },
+        "status": "draft",
+        "keywords": ["数据结构", "示例"]
+    },
+    {
+        "id": "sample-co-0001",
+        "subject": "计算机组成原理",
+        "question": "请替换为来自复试资料的计算机组成原理原题",
+        "referenceAnswer": "请替换为根据复试资料校对后的参考答案。",
+        "source": {
+            "document": "专业课面试刷题答案.pdf",
+            "page": 1,
+            "order": 2
+        },
+        "status": "draft",
+        "keywords": ["组成原理", "示例"]
+    },
+    {
+        "id": "sample-os-0001",
+        "subject": "操作系统",
+        "question": "请替换为来自复试资料的操作系统原题",
+        "referenceAnswer": "请替换为根据复试资料校对后的参考答案。",
+        "source": {
+            "document": "专业课面试刷题答案.pdf",
+            "page": 1,
+            "order": 3
+        },
+        "status": "draft",
+        "keywords": ["操作系统", "示例"]
+    },
+    {
+        "id": "sample-net-0001",
+        "subject": "计算机网络",
+        "question": "请替换为来自复试资料的计算机网络原题",
+        "referenceAnswer": "请替换为根据复试资料校对后的参考答案。",
+        "source": {
+            "document": "专业课面试刷题答案.pdf",
+            "page": 1,
+            "order": 4
+        },
+        "status": "draft",
+        "keywords": ["计算机网络", "示例"]
+    },
+    {
+        "id": "sample-db-0001",
+        "subject": "数据库",
+        "question": "请替换为来自复试资料的数据库原题",
+        "referenceAnswer": "请替换为根据复试资料校对后的参考答案。",
+        "source": {
+            "document": "专业课面试刷题答案.pdf",
+            "page": 1,
+            "order": 5
+        },
+        "status": "draft",
+        "keywords": ["数据库", "示例"]
+    },
+    {
+        "id": "sample-se-0001",
+        "subject": "软件工程",
+        "question": "请替换为来自复试资料的软件工程原题",
+        "referenceAnswer": "请替换为根据复试资料校对后的参考答案。",
+        "source": {
+            "document": "专业课面试刷题答案.pdf",
+            "page": 1,
+            "order": 6
+        },
+        "status": "draft",
+        "keywords": ["软件工程", "示例"]
+    }
+]

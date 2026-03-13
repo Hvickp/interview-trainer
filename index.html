@@ -1,0 +1,98 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>六门限定考研复试面试训练器</title>
+    <link rel="stylesheet" href="static/css/main.css">
+</head>
+<body>
+    <div class="page-shell">
+        <header class="hero">
+            <div class="hero-copy">
+                <p class="eyebrow">408 四门 + 数据库 + 软件工程</p>
+                <h1>六门限定复试面试训练器</h1>
+                <p class="hero-text">
+                    训练流程固定为先答后看。页面只加载六门白名单中的 <code>verified</code> 题目，
+                    其他科目、草稿题或无效题都会被过滤。支持直接加载 <code>JSON</code> 题库，
+                    也支持从六门 Markdown 文件夹本地导入并即时转换。
+                </p>
+            </div>
+            <div class="hero-panel">
+                <p class="hero-panel-label">当前正式题库</p>
+                <strong id="heroVerifiedCount">0</strong>
+                <span id="heroSourceLabel">等待加载题库</span>
+            </div>
+        </header>
+
+        <main class="layout">
+            <section class="panel controls-panel">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">训练范围</p>
+                        <h2>六门白名单</h2>
+                    </div>
+                    <div class="panel-actions">
+                        <button class="ghost-btn" id="loadManualBankBtn" type="button">加载 JSON 题库</button>
+                        <button class="ghost-btn" id="loadMarkdownFolderBtn" type="button">导入 Markdown 文件夹</button>
+                        <button class="ghost-btn danger" id="resetProgressBtn" type="button">清空本地进度</button>
+                    </div>
+                </div>
+
+                <p class="panel-subtitle">
+                    只接受 <code>数据结构 / 计算机组成原理 / 操作系统 / 计算机网络 / 数据库 / 软件工程</code> 六门。
+                    Markdown 文件夹导入会自动忽略范围外文件，并把题目转换为正式题库结构。
+                </p>
+
+                <div class="subject-grid" id="subjectButtons" aria-label="科目筛选"></div>
+
+                <div class="data-banner" id="dataBanner" hidden></div>
+
+                <input id="manualBankInput" type="file" accept=".json,application/json" hidden>
+                <input id="manualMarkdownDirInput" type="file" accept=".md,text/markdown" webkitdirectory directory multiple hidden>
+            </section>
+
+            <section class="stats-grid" aria-label="训练统计">
+                <article class="stat-card">
+                    <p class="stat-label">正式题目</p>
+                    <strong class="stat-value" id="totalVerifiedCount">0</strong>
+                    <span class="stat-note">只统计 verified</span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-label">当前范围</p>
+                    <strong class="stat-value" id="filteredCount">0</strong>
+                    <span class="stat-note">当前科目可抽题量</span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-label">本轮抽题</p>
+                    <strong class="stat-value" id="sessionCount">0</strong>
+                    <span class="stat-note">切换刷新后仍保留</span>
+                </article>
+                <article class="stat-card">
+                    <p class="stat-label">待强化</p>
+                    <strong class="stat-value" id="focusCount">0</strong>
+                    <span class="stat-note">不会 + 模糊</span>
+                </article>
+            </section>
+
+            <section class="panel trainer-panel">
+                <div class="panel-heading">
+                    <div>
+                        <p class="eyebrow">当前训练</p>
+                        <h2>单题节奏</h2>
+                    </div>
+                    <button class="primary-btn" id="nextQuestionBtn" type="button">抽取下一题</button>
+                </div>
+
+                <p class="panel-subtitle">
+                    系统会优先回抽“不会 / 模糊”的题，并避开最近 10 题的重复。
+                </p>
+
+                <div id="questionShell" class="question-shell" aria-live="polite"></div>
+            </section>
+        </main>
+    </div>
+
+    <script defer src="static/js/app.js"></script>
+</body>
+</html>
