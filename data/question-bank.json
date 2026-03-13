@@ -3170,7 +3170,7 @@
     {
         "id": "db-0035",
         "subject": "数据库",
-        "question": "视图的优点和缺点是什么？",
+        "question": "视图的缺点是什么？",
         "referenceAnswer": "缺点：查询性能开销（每次访问需重新执行底层 SQL）、更新限制（复杂连接或聚合视图通常不可更新）。",
         "source": {
             "document": "数据库.md",
