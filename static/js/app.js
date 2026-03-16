@@ -30,6 +30,15 @@
         }
     };
 
+    const TRAINING_MODES = {
+        survey: {
+            label: "首轮遍历优先"
+        },
+        reinforce: {
+            label: "弱项强化"
+        }
+    };
+
     const ALLOWED_STATUSES = new Set(["draft", "verified", "invalid"]);
     const RECENT_WINDOW_SIZE = 10;
     const IMPORT_SUBJECT_PREFIX = {
@@ -74,11 +83,14 @@
         elements.heroVerifiedCount = document.getElementById("heroVerifiedCount");
         elements.heroSourceLabel = document.getElementById("heroSourceLabel");
         elements.subjectButtons = document.getElementById("subjectButtons");
+        elements.trainingModeButtons = document.getElementById("trainingModeButtons");
         elements.dataBanner = document.getElementById("dataBanner");
         elements.totalVerifiedCount = document.getElementById("totalVerifiedCount");
         elements.filteredCount = document.getElementById("filteredCount");
         elements.sessionCount = document.getElementById("sessionCount");
         elements.focusCount = document.getElementById("focusCount");
+        elements.unseenCount = document.getElementById("unseenCount");
+        elements.trainerSubtitle = document.getElementById("trainerSubtitle");
         elements.questionShell = document.getElementById("questionShell");
         elements.nextQuestionBtn = document.getElementById("nextQuestionBtn");
         elements.resetProgressBtn = document.getElementById("resetProgressBtn");
@@ -90,6 +102,7 @@
 
     function bindEvents() {
         elements.subjectButtons.addEventListener("click", onSubjectClick);
+        elements.trainingModeButtons.addEventListener("click", onTrainingModeClick);
         elements.nextQuestionBtn.addEventListener("click", function () {
             drawNextQuestion();
         });
@@ -155,6 +168,23 @@
         }
 
         restoreOrDrawQuestion();
+    }
+
+    function onTrainingModeClick(event) {
+        const button = event.target.closest("button[data-mode]");
+        if (!button) {
+            return;
+        }
+
+        const nextMode = normalizeTrainingMode(button.getAttribute("data-mode"));
+        if (state.session.trainingMode === nextMode) {
+            return;
+        }
+
+        state.session.trainingMode = nextMode;
+        persistSession();
+        updateStats();
+        renderTrainerState();
     }
 
     function onQuestionShellClick(event) {
@@ -349,6 +379,7 @@
     function sanitizeSessionAgainstBank() {
         state.selectedSubject = normalizeSelectedSubject(state.selectedSubject);
         state.session.selectedSubject = state.selectedSubject;
+        state.session.trainingMode = normalizeTrainingMode(state.session.trainingMode);
         state.session.recentQuestionIds = state.session.recentQuestionIds.filter(function (id) {
             return state.bank.some(function (question) {
                 return question.id === id;
@@ -403,18 +434,18 @@
         const currentId = state.currentQuestion ? state.currentQuestion.id : null;
         const recentSet = new Set(state.session.recentQuestionIds);
 
-        let pool = candidates.filter(function (question) {
+        let pool = getPoolForTrainingMode(candidates.filter(function (question) {
             return !recentSet.has(question.id) && question.id !== currentId;
-        });
+        }));
 
         if (!pool.length) {
-            pool = candidates.filter(function (question) {
+            pool = getPoolForTrainingMode(candidates.filter(function (question) {
                 return question.id !== currentId;
-            });
+            }));
         }
 
         if (!pool.length) {
-            pool = candidates.slice();
+            pool = getPoolForTrainingMode(candidates.slice());
         }
 
         const nextQuestion = weightedPick(pool);
@@ -422,6 +453,7 @@
             return;
         }
 
+        markQuestionDrawn(nextQuestion.id);
         state.currentQuestion = nextQuestion;
         pushRecentQuestion(nextQuestion.id);
         state.session.currentQuestionId = nextQuestion.id;
@@ -459,6 +491,15 @@
         }
 
         return weightedPool[weightedPool.length - 1].question;
+    }
+
+    function getPoolForTrainingMode(pool) {
+        if (state.session.trainingMode !== "survey") {
+            return pool;
+        }
+
+        const unseenPool = getUnseenQuestions(pool);
+        return unseenPool.length ? unseenPool : pool;
     }
 
     function computeQuestionWeight(question) {
@@ -509,6 +550,7 @@
         const currentProgress = getQuestionProgress(state.currentQuestion.id);
         const updatedProgress = {
             mastery: mastery,
+            drawCount: currentProgress.drawCount,
             seenCount: currentProgress.seenCount + (state.session.currentAssessmentRecorded ? 0 : 1),
             lastSeenAt: new Date().toISOString()
         };
@@ -556,6 +598,14 @@
         elements.subjectButtons.appendChild(fragment);
     }
 
+    function renderTrainingModeButtons(unseenCount, filteredCount) {
+        const fragment = document.createDocumentFragment();
+        fragment.appendChild(createTrainingModeButton("survey", unseenCount, filteredCount));
+        fragment.appendChild(createTrainingModeButton("reinforce", unseenCount, filteredCount));
+        elements.trainingModeButtons.innerHTML = "";
+        elements.trainingModeButtons.appendChild(fragment);
+    }
+
     function createSubjectButton(subject, label, count) {
         const button = document.createElement("button");
         button.type = "button";
@@ -566,6 +616,29 @@
             "<span class='subject-btn-label'>" + escapeHtml(label) + "</span>" +
             "<strong class='subject-btn-count'>" + count + "</strong>" +
             "<span class='subject-btn-note'>" + (subject === "all" ? "按白名单合并抽题" : "当前可用 verified 题目") + "</span>";
+        return button;
+    }
+
+    function createTrainingModeButton(mode, unseenCount, filteredCount) {
+        const button = document.createElement("button");
+        const isActive = state.session.trainingMode === mode;
+        button.type = "button";
+        button.className = "training-mode-btn" + (isActive ? " active" : "");
+        button.setAttribute("data-mode", mode);
+        button.setAttribute("aria-pressed", isActive ? "true" : "false");
+
+        let note = "直接按“不会 / 模糊 / 会”的权重回抽。";
+        if (mode === "survey") {
+            note = filteredCount
+                ? unseenCount
+                    ? "当前范围还有 " + unseenCount + " 题未抽到，先完成首轮覆盖。"
+                    : "当前范围首轮已完成，之后自动回到弱项强化。"
+                : "当前范围为空，切换科目或导入题库后开始首轮遍历。";
+        }
+
+        button.innerHTML =
+            "<span class='subject-btn-label'>" + escapeHtml(TRAINING_MODES[mode].label) + "</span>" +
+            "<span class='subject-btn-note'>" + escapeHtml(note) + "</span>";
         return button;
     }
 
@@ -606,11 +679,35 @@
             const mastery = getQuestionProgress(question.id).mastery;
             return mastery === "weak" || mastery === "fuzzy";
         }).length;
+        const unseenCount = getUnseenQuestions(filteredQuestions).length;
 
         elements.totalVerifiedCount.textContent = String(state.bank.length);
         elements.filteredCount.textContent = String(filteredQuestions.length);
         elements.sessionCount.textContent = String(state.session.askedCount);
         elements.focusCount.textContent = String(focusCount);
+        elements.unseenCount.textContent = String(unseenCount);
+        renderTrainingModeButtons(unseenCount, filteredQuestions.length);
+        updateTrainerSubtitle(filteredQuestions.length, unseenCount);
+    }
+
+    function updateTrainerSubtitle(filteredCount, unseenCount) {
+        if (!elements.trainerSubtitle) {
+            return;
+        }
+
+        if (!filteredCount) {
+            elements.trainerSubtitle.textContent = "当前科目没有可训练题目。切换科目或导入正式题库后即可开始。";
+            return;
+        }
+
+        if (state.session.trainingMode === "survey") {
+            elements.trainerSubtitle.textContent = unseenCount
+                ? "当前为“首轮遍历优先”：先抽当前范围内还没抽到的 " + unseenCount + " 题，首轮完成后再按弱项权重回抽，并避开最近 10 题重复。"
+                : "当前范围首轮已完成；系统会继续优先回抽“不会 / 模糊”的题，并避开最近 10 题重复。";
+            return;
+        }
+
+        elements.trainerSubtitle.textContent = "当前为“弱项强化”：系统会直接按“不会 / 模糊 / 会”的权重回抽，并避开最近 10 题重复。";
     }
 
     function renderTrainerState() {
@@ -634,18 +731,19 @@
 
     function renderReadyState() {
         const scopeLabel = state.selectedSubject === "all" ? "全部六门" : state.selectedSubject;
+        const strategyLabel = TRAINING_MODES[state.session.trainingMode].label;
 
         elements.questionShell.innerHTML =
             "<article class='empty-card'>" +
             "<div>" +
             "<p class='eyebrow'>准备开始</p>" +
             "<h3 class='empty-title'>" + escapeHtml(scopeLabel) + " 已就绪</h3>" +
-            "<p class='empty-copy'>本地进度已经清空。点击右上角“抽取下一题”，按先答后看的节奏重新开始训练。</p>" +
+            "<p class='empty-copy'>当前策略：<strong>" + escapeHtml(strategyLabel) + "</strong>。点击右上角“抽取下一题”，按先答后看的节奏继续训练。</p>" +
             "</div>" +
             "<ul class='empty-list'>" +
             "<li>先答题，再展开参考答案</li>" +
             "<li>每题展开答案后用“不会 / 模糊 / 会”更新掌握度</li>" +
-            "<li>系统会优先回抽弱项，并避开最近 10 题重复</li>" +
+            "<li>首轮遍历优先会先覆盖未抽过题目，再回到弱项强化</li>" +
             "</ul>" +
             "</article>";
     }
@@ -708,6 +806,8 @@
         const masteryLabel = progress.mastery ? MASTERY_MAP[progress.mastery].label : "未标注";
         const historyLine = progress.seenCount
             ? "历史掌握度： " + masteryLabel + " · 已记录 " + progress.seenCount + " 次训练"
+            : progress.drawCount
+                ? "历史掌握度： 未标注 · 已抽到 " + progress.drawCount + " 次，尚未完成正式自评"
             : "历史掌握度： 未标注 · 这道题还没有正式训练记录";
 
         const answerContentClass = state.session.answerVisible ? "answer-content" : "answer-content is-hidden";
@@ -782,6 +882,7 @@
         if (!saved || typeof saved !== "object") {
             return {
                 mastery: "",
+                drawCount: 0,
                 seenCount: 0,
                 lastSeenAt: null
             };
@@ -789,9 +890,27 @@
 
         return {
             mastery: trimString(saved.mastery),
+            drawCount: toPositiveInteger(saved.drawCount) || 0,
             seenCount: toPositiveInteger(saved.seenCount) || 0,
             lastSeenAt: trimString(saved.lastSeenAt) || null
         };
+    }
+
+    function getUnseenQuestions(questions) {
+        return questions.filter(function (question) {
+            return getQuestionProgress(question.id).drawCount === 0;
+        });
+    }
+
+    function markQuestionDrawn(questionId) {
+        const currentProgress = getQuestionProgress(questionId);
+        state.progress.questions[questionId] = {
+            mastery: currentProgress.mastery,
+            drawCount: currentProgress.drawCount + 1,
+            seenCount: currentProgress.seenCount,
+            lastSeenAt: currentProgress.lastSeenAt
+        };
+        persistProgress();
     }
 
     function pushRecentQuestion(questionId) {
@@ -1028,6 +1147,7 @@
             if (parsed && typeof parsed === "object") {
                 return {
                     selectedSubject: normalizeSelectedSubject(parsed.selectedSubject),
+                    trainingMode: normalizeTrainingMode(parsed.trainingMode),
                     recentQuestionIds: Array.isArray(parsed.recentQuestionIds)
                         ? parsed.recentQuestionIds.filter(function (item) { return typeof item === "string" && item; }).slice(-RECENT_WINDOW_SIZE)
                         : [],
@@ -1053,6 +1173,7 @@
     function createDefaultSession() {
         return {
             selectedSubject: "all",
+            trainingMode: "survey",
             recentQuestionIds: [],
             currentQuestionId: null,
             askedCount: 0,
@@ -1071,6 +1192,10 @@
 
     function normalizeSelectedSubject(subject) {
         return SUBJECT_WHITELIST.includes(subject) ? subject : "all";
+    }
+
+    function normalizeTrainingMode(mode) {
+        return Object.prototype.hasOwnProperty.call(TRAINING_MODES, mode) ? mode : "survey";
     }
 
     function trimString(value) {

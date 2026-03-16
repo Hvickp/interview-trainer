@@ -186,7 +186,34 @@ code {
     margin-top: 20px;
 }
 
+.strategy-panel {
+    margin-top: 18px;
+    padding: 16px;
+    border: 1px solid rgba(31, 42, 38, 0.08);
+    border-radius: var(--radius-lg);
+    background: rgba(255, 255, 255, 0.58);
+}
+
+.strategy-copy {
+    display: grid;
+    gap: 6px;
+}
+
+.strategy-note {
+    margin: 0;
+    line-height: 1.7;
+    color: var(--muted);
+}
+
+.strategy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
+    margin-top: 14px;
+}
+
 .subject-btn,
+.training-mode-btn,
 .mastery-btn,
 .primary-btn,
 .ghost-btn,
@@ -211,7 +238,21 @@ code {
     text-align: left;
 }
 
+.training-mode-btn {
+    display: grid;
+    gap: 8px;
+    justify-items: start;
+    min-height: 88px;
+    padding: 16px;
+    border: 1px solid rgba(31, 42, 38, 0.12);
+    border-radius: var(--radius-md);
+    background: rgba(255, 255, 255, 0.82);
+    color: var(--ink);
+    text-align: left;
+}
+
 .subject-btn:hover,
+.training-mode-btn:hover,
 .mastery-btn:hover,
 .primary-btn:hover,
 .ghost-btn:hover,
@@ -224,6 +265,12 @@ code {
     background: linear-gradient(180deg, rgba(47, 111, 94, 0.2), rgba(47, 111, 94, 0.08));
     border-color: rgba(47, 111, 94, 0.4);
     box-shadow: 0 10px 24px rgba(47, 111, 94, 0.14);
+}
+
+.training-mode-btn.active {
+    background: linear-gradient(180deg, rgba(47, 111, 94, 0.18), rgba(47, 111, 94, 0.08));
+    border-color: rgba(47, 111, 94, 0.42);
+    box-shadow: 0 10px 24px rgba(47, 111, 94, 0.12);
 }
 
 .subject-btn.is-empty {
@@ -264,7 +311,7 @@ code {
 
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 14px;
 }
 

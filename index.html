@@ -47,6 +47,16 @@
 
                 <div class="subject-grid" id="subjectButtons" aria-label="科目筛选"></div>
 
+                <section class="strategy-panel" aria-label="训练策略">
+                    <div class="strategy-copy">
+                        <p class="eyebrow">训练策略</p>
+                        <p class="strategy-note">
+                            默认使用“首轮遍历优先”：先把当前范围内还没抽到的题走完一轮，再切回弱项强化。
+                        </p>
+                    </div>
+                    <div class="strategy-grid" id="trainingModeButtons" aria-label="抽题策略"></div>
+                </section>
+
                 <div class="data-banner" id="dataBanner" hidden></div>
 
                 <input id="manualBankInput" type="file" accept=".json,application/json" hidden>
@@ -74,6 +84,11 @@
                     <strong class="stat-value" id="focusCount">0</strong>
                     <span class="stat-note">不会 + 模糊</span>
                 </article>
+                <article class="stat-card">
+                    <p class="stat-label">首轮未过</p>
+                    <strong class="stat-value" id="unseenCount">0</strong>
+                    <span class="stat-note">当前范围还没抽到</span>
+                </article>
             </section>
 
             <section class="panel trainer-panel">
@@ -85,7 +100,7 @@
                     <button class="primary-btn" id="nextQuestionBtn" type="button">抽取下一题</button>
                 </div>
 
-                <p class="panel-subtitle">
+                <p class="panel-subtitle" id="trainerSubtitle">
                     系统会优先回抽“不会 / 模糊”的题，并避开最近 10 题的重复。
                 </p>
 
