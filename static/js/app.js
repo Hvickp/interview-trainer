@@ -32,7 +32,7 @@
 
     const TRAINING_MODES = {
         survey: {
-            label: "首轮遍历优先"
+            label: "完整遍历"
         },
         reinforce: {
             label: "弱项强化"
@@ -380,6 +380,7 @@
         state.selectedSubject = normalizeSelectedSubject(state.selectedSubject);
         state.session.selectedSubject = state.selectedSubject;
         state.session.trainingMode = normalizeTrainingMode(state.session.trainingMode);
+        state.session.surveyCycles = sanitizeSurveyCyclesAgainstBank(state.session.surveyCycles);
         state.session.recentQuestionIds = state.session.recentQuestionIds.filter(function (id) {
             return state.bank.some(function (question) {
                 return question.id === id;
@@ -393,6 +394,36 @@
         }
 
         persistSession();
+    }
+
+    function sanitizeSurveyCyclesAgainstBank(cycles) {
+        const normalized = normalizeSurveyCycles(cycles);
+        const questionMap = new Map(state.bank.map(function (question) {
+            return [question.id, question];
+        }));
+
+        Object.keys(normalized).forEach(function (scopeKey) {
+            const seen = new Set();
+            normalized[scopeKey].pendingIds = normalized[scopeKey].pendingIds.filter(function (id) {
+                if (seen.has(id)) {
+                    return false;
+                }
+
+                const question = questionMap.get(id);
+                if (!question) {
+                    return false;
+                }
+
+                if (scopeKey !== "all" && question.subject !== scopeKey) {
+                    return false;
+                }
+
+                seen.add(id);
+                return true;
+            });
+        });
+
+        return normalized;
     }
 
     function restoreOrDrawQuestion() {
@@ -431,6 +462,8 @@
             return;
         }
 
+        ensureSurveyCycleForDraw(candidates);
+
         const currentId = state.currentQuestion ? state.currentQuestion.id : null;
         const recentSet = new Set(state.session.recentQuestionIds);
 
@@ -454,6 +487,7 @@
         }
 
         markQuestionDrawn(nextQuestion.id);
+        removeQuestionFromSurveyCycle(nextQuestion.id);
         state.currentQuestion = nextQuestion;
         pushRecentQuestion(nextQuestion.id);
         state.session.currentQuestionId = nextQuestion.id;
@@ -498,8 +532,16 @@
             return pool;
         }
 
-        const unseenPool = getUnseenQuestions(pool);
-        return unseenPool.length ? unseenPool : pool;
+        const cycle = getSurveyCycleState(getCurrentScopeKey());
+        if (!cycle.started || !cycle.pendingIds.length) {
+            return pool;
+        }
+
+        const pendingSet = new Set(cycle.pendingIds);
+        const surveyPool = pool.filter(function (question) {
+            return pendingSet.has(question.id);
+        });
+        return surveyPool.length ? surveyPool : pool;
     }
 
     function computeQuestionWeight(question) {
@@ -629,11 +671,14 @@
 
         let note = "直接按“不会 / 模糊 / 会”的权重回抽。";
         if (mode === "survey") {
+            const cycle = getSurveyCycleState(getCurrentScopeKey());
             note = filteredCount
-                ? unseenCount
-                    ? "当前范围还有 " + unseenCount + " 题未抽到，先完成首轮覆盖。"
-                    : "当前范围首轮已完成，之后自动回到弱项强化。"
-                : "当前范围为空，切换科目或导入题库后开始首轮遍历。";
+                ? !cycle.started
+                    ? "切换后会在当前范围内完整走一轮，共 " + filteredCount + " 题。"
+                    : unseenCount
+                        ? "当前这一轮完整遍历还剩 " + unseenCount + " 题。"
+                        : "当前这一轮已完成；继续停留在该模式时，下次抽题会自动重新开始一轮。"
+                : "当前范围为空，切换科目或导入题库后即可开始完整遍历。";
         }
 
         button.innerHTML =
@@ -679,7 +724,7 @@
             const mastery = getQuestionProgress(question.id).mastery;
             return mastery === "weak" || mastery === "fuzzy";
         }).length;
-        const unseenCount = getUnseenQuestions(filteredQuestions).length;
+        const unseenCount = getSurveyRemainingQuestions(filteredQuestions).length;
 
         elements.totalVerifiedCount.textContent = String(state.bank.length);
         elements.filteredCount.textContent = String(filteredQuestions.length);
@@ -701,9 +746,12 @@
         }
 
         if (state.session.trainingMode === "survey") {
-            elements.trainerSubtitle.textContent = unseenCount
-                ? "当前为“首轮遍历优先”：先抽当前范围内还没抽到的 " + unseenCount + " 题，首轮完成后再按弱项权重回抽，并避开最近 10 题重复。"
-                : "当前范围首轮已完成；系统会继续优先回抽“不会 / 模糊”的题，并避开最近 10 题重复。";
+            const cycle = getSurveyCycleState(getCurrentScopeKey());
+            elements.trainerSubtitle.textContent = !cycle.started
+                ? "当前为“完整遍历”：点击“抽取下一题”后，会先把当前范围内的 " + filteredCount + " 题完整走一轮，并避开最近 10 题重复。"
+                : unseenCount
+                    ? "当前为“完整遍历”：本轮还剩 " + unseenCount + " 题未抽到，抽完这一轮前不会重开新一轮。"
+                    : "当前为“完整遍历”：本轮已完成；如果你继续停留在该模式，下次抽题会自动重新开始一轮。";
             return;
         }
 
@@ -743,7 +791,7 @@
             "<ul class='empty-list'>" +
             "<li>先答题，再展开参考答案</li>" +
             "<li>每题展开答案后用“不会 / 模糊 / 会”更新掌握度</li>" +
-            "<li>首轮遍历优先会先覆盖未抽过题目，再回到弱项强化</li>" +
+            "<li>切到“完整遍历”后，会把当前范围完整走一轮；走完后若仍停留在该模式，下次抽题会自动重开一轮</li>" +
             "</ul>" +
             "</article>";
     }
@@ -877,6 +925,10 @@
         return state.selectedSubject === "all" || question.subject === state.selectedSubject;
     }
 
+    function getCurrentScopeKey() {
+        return state.selectedSubject;
+    }
+
     function getQuestionProgress(questionId) {
         const saved = state.progress.questions[questionId];
         if (!saved || typeof saved !== "object") {
@@ -896,10 +948,78 @@
         };
     }
 
-    function getUnseenQuestions(questions) {
+    function getSurveyRemainingQuestions(questions) {
+        if (!questions.length) {
+            return [];
+        }
+
+        const cycle = getSurveyCycleState(getCurrentScopeKey());
+        if (!cycle.started) {
+            return questions.slice();
+        }
+
+        const pendingSet = new Set(cycle.pendingIds);
         return questions.filter(function (question) {
-            return getQuestionProgress(question.id).drawCount === 0;
+            return pendingSet.has(question.id);
         });
+    }
+
+    function getSurveyCycleState(scopeKey) {
+        const cycle = state.session.surveyCycles[scopeKey];
+        if (!cycle || typeof cycle !== "object") {
+            return {
+                started: false,
+                pendingIds: []
+            };
+        }
+
+        return {
+            started: Boolean(cycle.started),
+            pendingIds: Array.isArray(cycle.pendingIds) ? cycle.pendingIds.slice() : []
+        };
+    }
+
+    function ensureSurveyCycleForDraw(questions) {
+        if (state.session.trainingMode !== "survey" || !questions.length) {
+            return;
+        }
+
+        const scopeKey = getCurrentScopeKey();
+        const cycle = getSurveyCycleState(scopeKey);
+        const pendingSet = new Set(cycle.pendingIds);
+        const hasCurrentPending = questions.some(function (question) {
+            return pendingSet.has(question.id);
+        });
+
+        if (!cycle.started || !cycle.pendingIds.length || !hasCurrentPending) {
+            state.session.surveyCycles[scopeKey] = {
+                started: true,
+                pendingIds: questions.map(function (question) {
+                    return question.id;
+                })
+            };
+        }
+    }
+
+    function removeQuestionFromSurveyCycle(questionId) {
+        if (state.session.trainingMode !== "survey") {
+            return;
+        }
+
+        const scopeKey = getCurrentScopeKey();
+        const cycle = getSurveyCycleState(scopeKey);
+        if (!cycle.started || !cycle.pendingIds.length) {
+            return;
+        }
+
+        const nextPendingIds = cycle.pendingIds.filter(function (id) {
+            return id !== questionId;
+        });
+
+        state.session.surveyCycles[scopeKey] = {
+            started: true,
+            pendingIds: nextPendingIds
+        };
     }
 
     function markQuestionDrawn(questionId) {
@@ -1148,6 +1268,7 @@
                 return {
                     selectedSubject: normalizeSelectedSubject(parsed.selectedSubject),
                     trainingMode: normalizeTrainingMode(parsed.trainingMode),
+                    surveyCycles: normalizeSurveyCycles(parsed.surveyCycles),
                     recentQuestionIds: Array.isArray(parsed.recentQuestionIds)
                         ? parsed.recentQuestionIds.filter(function (item) { return typeof item === "string" && item; }).slice(-RECENT_WINDOW_SIZE)
                         : [],
@@ -1173,7 +1294,8 @@
     function createDefaultSession() {
         return {
             selectedSubject: "all",
-            trainingMode: "survey",
+            trainingMode: "reinforce",
+            surveyCycles: {},
             recentQuestionIds: [],
             currentQuestionId: null,
             askedCount: 0,
@@ -1195,7 +1317,32 @@
     }
 
     function normalizeTrainingMode(mode) {
-        return Object.prototype.hasOwnProperty.call(TRAINING_MODES, mode) ? mode : "survey";
+        return Object.prototype.hasOwnProperty.call(TRAINING_MODES, mode) ? mode : "reinforce";
+    }
+
+    function normalizeSurveyCycles(value) {
+        if (!value || typeof value !== "object") {
+            return {};
+        }
+
+        const normalized = {};
+        const allowedScopes = new Set(["all"].concat(SUBJECT_WHITELIST));
+
+        Object.keys(value).forEach(function (scopeKey) {
+            if (!allowedScopes.has(scopeKey)) {
+                return;
+            }
+
+            const cycle = value[scopeKey];
+            normalized[scopeKey] = {
+                started: Boolean(cycle && cycle.started),
+                pendingIds: Array.isArray(cycle && cycle.pendingIds)
+                    ? cycle.pendingIds.filter(function (id) { return typeof id === "string" && id; })
+                    : []
+            };
+        });
+
+        return normalized;
     }
 
     function trimString(value) {

@@ -52,7 +52,8 @@
                     <div class="strategy-copy">
                         <p class="eyebrow">训练策略</p>
                         <p class="strategy-note">
-                            默认使用“首轮遍历优先”：先把当前范围内还没抽到的题走完一轮，再切回弱项强化。
+                            可随时切到“完整遍历”：先把当前范围内的题完整走完一轮；若这一轮结束后仍停留在该模式，
+                            下一次抽题会自动重新开始一轮。
                         </p>
                     </div>
                     <div class="strategy-grid" id="trainingModeButtons" aria-label="抽题策略"></div>
@@ -86,9 +87,9 @@
                     <span class="stat-note">不会 + 模糊</span>
                 </article>
                 <article class="stat-card">
-                    <p class="stat-label">首轮未过</p>
+                    <p class="stat-label">遍历剩余</p>
                     <strong class="stat-value" id="unseenCount">0</strong>
-                    <span class="stat-note">当前范围还没抽到</span>
+                    <span class="stat-note">完整遍历当前还没抽到</span>
                 </article>
             </section>
 
@@ -102,7 +103,7 @@
                 </div>
 
                 <p class="panel-subtitle" id="trainerSubtitle">
-                    系统会优先回抽“不会 / 模糊”的题，并避开最近 10 题的重复。
+                    系统会按当前策略抽题，并避开最近 10 题的重复。
                 </p>
 
                 <div id="questionShell" class="question-shell" aria-live="polite"></div>
