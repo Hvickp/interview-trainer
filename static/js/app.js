@@ -381,6 +381,10 @@
         state.session.selectedSubject = state.selectedSubject;
         state.session.trainingMode = normalizeTrainingMode(state.session.trainingMode);
         state.session.surveyCycles = sanitizeSurveyCyclesAgainstBank(state.session.surveyCycles);
+        if (!state.session.surveyCyclesMigrated) {
+            state.session.surveyCycles = migrateLegacySurveyCycles(state.session.surveyCycles);
+            state.session.surveyCyclesMigrated = true;
+        }
         state.session.recentQuestionIds = state.session.recentQuestionIds.filter(function (id) {
             return state.bank.some(function (question) {
                 return question.id === id;
@@ -421,6 +425,38 @@
                 seen.add(id);
                 return true;
             });
+        });
+
+        return normalized;
+    }
+
+    function migrateLegacySurveyCycles(cycles) {
+        const normalized = normalizeSurveyCycles(cycles);
+        const scopes = ["all"].concat(SUBJECT_WHITELIST);
+
+        scopes.forEach(function (scopeKey) {
+            if (Object.prototype.hasOwnProperty.call(normalized, scopeKey)) {
+                return;
+            }
+
+            const pendingIds = state.bank.filter(function (question) {
+                if (scopeKey !== "all" && question.subject !== scopeKey) {
+                    return false;
+                }
+
+                return getQuestionProgress(question.id).drawCount === 0;
+            }).map(function (question) {
+                return question.id;
+            });
+
+            if (!pendingIds.length) {
+                return;
+            }
+
+            normalized[scopeKey] = {
+                started: true,
+                pendingIds: pendingIds
+            };
         });
 
         return normalized;
@@ -1269,6 +1305,7 @@
                     selectedSubject: normalizeSelectedSubject(parsed.selectedSubject),
                     trainingMode: normalizeTrainingMode(parsed.trainingMode),
                     surveyCycles: normalizeSurveyCycles(parsed.surveyCycles),
+                    surveyCyclesMigrated: parsed.surveyCyclesMigrated === true,
                     recentQuestionIds: Array.isArray(parsed.recentQuestionIds)
                         ? parsed.recentQuestionIds.filter(function (item) { return typeof item === "string" && item; }).slice(-RECENT_WINDOW_SIZE)
                         : [],
@@ -1296,6 +1333,7 @@
             selectedSubject: "all",
             trainingMode: "reinforce",
             surveyCycles: {},
+            surveyCyclesMigrated: true,
             recentQuestionIds: [],
             currentQuestionId: null,
             askedCount: 0,
